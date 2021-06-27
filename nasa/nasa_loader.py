@@ -24,29 +24,25 @@ if getenv('CQLENG_ALLOW_SCHEMA_MANAGEMENT') is None:
 
 def get_config() -> Config:
     """
-    Tries to load configuration from environment variables
+    Loads configuration from environment variables
     """
-    try:
-        if {
-            'NASA_DB_HOST',
-            'NASA_DB_PORT',
-            'NASA_DB_KEYSPACE',
-            'NASA_SOURCE_URL'
-        }.issubset(env.keys()):
-            config = Config(
-                env['NASA_DB_HOST'],
-                int(env['NASA_DB_PORT']),
-                env['NASA_DB_KEYSPACE'],
-                env['NASA_SOURCE_URL']
-            )
-            if 'WAITING_TO_CONNECT_PERIOD_SEC' in env.keys() and str.isnumeric(env['WAITING_TO_CONNECT_PERIOD_SEC']):
-                config.set_waiting_for_connect = int(env['WAITING_TO_CONNECT_PERIOD_SEC'])
-            return config
-        else:
-            raise Exception("No valid configuration found")
-    except Exception as err:
-        logger.fatal(f"Configuration initialization fault: {err}")
-        raise
+    if {
+        'NASA_DB_HOST',
+        'NASA_DB_PORT',
+        'NASA_DB_KEYSPACE',
+        'NASA_SOURCE_URL'
+    }.issubset(env.keys()):
+        config = Config(
+            env['NASA_DB_HOST'],
+            int(env['NASA_DB_PORT']),
+            env['NASA_DB_KEYSPACE'],
+            env['NASA_SOURCE_URL']
+        )
+        if 'WAITING_TO_CONNECT_PERIOD_SEC' in env.keys() and str.isnumeric(env['WAITING_TO_CONNECT_PERIOD_SEC']):
+            config.set_waiting_for_connect = int(env['WAITING_TO_CONNECT_PERIOD_SEC'])
+        return config
+    else:
+        raise Exception("Configuration initialization fault because no valid configuration found.")
 
 
 def get_raw_data(config: Config) -> Iterator[Dict[str, Any]]:
@@ -59,8 +55,8 @@ def get_raw_data(config: Config) -> Iterator[Dict[str, Any]]:
                     if item:
                         yield item
         except requests.HTTPError as http_error:
-            logging.error(f"Http error: {http_error}")
-            raise Exception(http_error)
+            logging.error(f"Connection to Nasa raw data fault: {http_error}")
+            raise
         except Exception as error:
             logging.error(f"Error: {error}")
             raise
@@ -105,6 +101,7 @@ def save_items(config: Config):
         logger.info("Done")
     except Exception as save_err:
         logger.error(f"Saving items fault: {save_err}")
+        raise
 
 
 if __name__ == '__main__':
@@ -124,10 +121,14 @@ if __name__ == '__main__':
         time.sleep(10)
         _waiting_connection_period -= 10
 
-    if _session and _waiting_connection_period >= 0:
-        register_connection(name=str(_session), session=_session)
-        set_default_connection(str(_session))
-        sync_schema(configuration)
-        save_items(configuration)
-    else:
-        logger.fatal(f"DB connection fault. Please check config: {configuration}")
+    try:
+        if _session and _waiting_connection_period >= 0:
+            register_connection(name=str(_session), session=_session)
+            set_default_connection(str(_session))
+            sync_schema(configuration)
+            save_items(configuration)
+        else:
+            logger.fatal(f"DB connection fault. Please check config: {configuration}")
+            raise Exception(f"DB connection fault. Please check config: {configuration}")
+    except Exception as e:
+        logger.fatal(f"Nasa loader service fault: {e}")
