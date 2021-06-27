@@ -32,15 +32,14 @@ def get_config() -> Config:
         'NASA_DB_KEYSPACE',
         'NASA_SOURCE_URL'
     }.issubset(env.keys()):
-        config = Config(
-            env['NASA_DB_HOST'],
-            int(env['NASA_DB_PORT']),
-            env['NASA_DB_KEYSPACE'],
-            env['NASA_SOURCE_URL']
+        return Config(
+            host=env['NASA_DB_HOST'],
+            port=int(env['NASA_DB_PORT']),
+            keyspace=env['NASA_DB_KEYSPACE'],
+            source_url=env['NASA_SOURCE_URL'],
+            waiting_for_connect=int(getenv('WAITING_TO_CONNECT_PERIOD_SEC', 600)),
+            replication_factor=int(getenv('NASA_DB_REPLICATION_FACTOR', 1))
         )
-        if 'WAITING_TO_CONNECT_PERIOD_SEC' in env.keys() and str.isnumeric(env['WAITING_TO_CONNECT_PERIOD_SEC']):
-            config.set_waiting_for_connect = int(env['WAITING_TO_CONNECT_PERIOD_SEC'])
-        return config
     else:
         raise Exception("Configuration initialization fault because no valid configuration found.")
 

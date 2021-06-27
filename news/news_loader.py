@@ -2,7 +2,7 @@ from pymongo import MongoClient, InsertOne
 import logging
 from typing import Iterator, Any, Dict
 import requests
-from os import environ as env
+from os import environ as env, getenv
 from datetime import date, timedelta
 from dataclasses import asdict
 from model.article import Article, Source
@@ -29,11 +29,13 @@ def get_config() -> Config:
         'NEWS_API_KEY'
     }.issubset(env.keys()):
         return Config(
-            env['NEWS_DB_HOST'],
-            int(env['NEWS_DB_PORT']),
-            env['NEWS_DB_COLLECTION_NAME'],
-            env['NEWS_SOURCE_URL'],
-            env['NEWS_API_KEY']
+            host=env['NEWS_DB_HOST'],
+            port=int(env['NEWS_DB_PORT']),
+            collection=env['NEWS_DB_COLLECTION_NAME'],
+            source_url=env['NEWS_SOURCE_URL'],
+            api_key=env['NEWS_API_KEY'],
+            days_ago=int(getenv('NEWS_DAYS_AGO', 1)),
+            connect_timeout_ms=int(getenv('NEWS_CONNECT_TIMEOUT_MS', 600000))
         )
     else:
         logger.fatal(f"Configuration initialization fault because no valid configuration found.")
@@ -95,8 +97,8 @@ def save_news(mongo: MongoClient = None, config: Config = None):
     try:
         news_db = mongo[config.collection]
         today = date.today()
-        week_ago = today - timedelta(days=1)
-        for day in _days_range(today, week_ago, -1):
+        days_ago = today - timedelta(days=config.days_ago)
+        for day in _days_range(today, days_ago, -1):
             raw_articles = get_raw_data(str.format(config.source_url, *(day, day + timedelta(days=-1), config.api_key)))
             bulk_operations = (InsertOne(asdict(article)) for article in articles(raw_articles))
             saved_news = news_db['articles'].bulk_write(requests=list(bulk_operations)).inserted_count
