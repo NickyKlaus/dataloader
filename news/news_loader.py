@@ -40,6 +40,7 @@ def get_config() -> Config:
             raise Exception("No valid configuration found")
     except Exception as err:
         logger.fatal(f"Configuration initialization fault: {err}")
+        raise
 
 
 def get_raw_data(source_url) -> Iterator[Dict[str, Any]]:
@@ -108,6 +109,7 @@ def save_news(mongo: MongoClient = None, config: Config = None):
         logger.info("Done")
     except Exception as e:
         logger.error(f"DB error: {e}")
+        raise
 
 
 if __name__ == '__main__':
