@@ -1,0 +1,106 @@
+version: "3"
+
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    restart: always
+    hostname: mongodb
+    networks:
+      data-loading:
+        aliases:
+          - mondodb
+    ports:
+      - 27017:27017
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: "512M"
+        reservations:
+          cpus: "0.1"
+          memory: "128M"
+
+
+  cassandra:
+    image: cassandra
+    container_name: cassandra
+    hostname: cassandradb
+    networks:
+      data-loading:
+        aliases:
+          - cassandradb
+    ports:
+      - 7000:7000
+      - 7001:7001
+      - 7199:7199
+      - 9042:9042
+      - 9160:9160
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: "4G"
+        reservations:
+          cpus: "0.1"
+          memory: "1G"
+
+  nasa_data_loader:
+    image: nasa_data_loader
+    container_name: nasa_dataloader
+    depends_on:
+      - cassandra
+    networks:
+      data-loading:
+        aliases:
+          - nasa_data_loader
+    environment:
+      - NASA_DB_HOST=cassandradb
+      - NASA_DB_PORT=9042
+      - NASA_DB_KEYSPACE=nasa
+      - NASA_SOURCE_URL=https://images-api.nasa.gov/search?q=nasa&media_type=image
+      - WAITING_TO_CONNECT_PERIOD_SEC=600
+    build:
+      ./nasa
+    command:
+      python ./nasa_loader.py
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "256M"
+        reservations:
+          cpus: "0.05"
+          memory: "128M"
+
+  news_data_loader:
+    image: news_data_loader
+    container_name: news_dataloader
+    depends_on:
+      - mongo
+    networks:
+      data-loading:
+        aliases:
+          - news_data_loader
+    build:
+      ./news
+    command:
+      python ./news_loader.py
+    environment:
+      - NEWS_DB_HOST=mongo
+      - NEWS_DB_PORT=27017
+      - NEWS_DB_COLLECTION_NAME=news
+      - NEWS_SOURCE_URL=https://newsapi.org/v2/everything?q=nasa&from={}&to={}&apiKey={}
+      - NEWS_API_KEY=
+    deploy:
+      resources:
+        limits:
+          cpus: "0.05"
+          memory: "256M"
+        reservations:
+          cpus: "0.05"
+          memory: "128M"
+
+networks:
+  data-loading:
+    driver: "bridge"
