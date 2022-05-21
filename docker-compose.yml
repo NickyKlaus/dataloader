@@ -35,8 +35,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: "4G"
+          cpus: "0.7"
+          memory: "8G"
 
   nasa_data_loader:
     image: nasa_data_loader
