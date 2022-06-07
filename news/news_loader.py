@@ -101,7 +101,7 @@ def save_news(mongo: MongoClient = None, config: Config = None):
         for day in _days_range(today, days_ago, -1):
             raw_articles = get_raw_data(str.format(config.source_url, *(day, day + timedelta(days=-1), config.api_key)))
             bulk_operations = (InsertOne(asdict(article)) for article in articles(raw_articles))
-            saved_news = news_db['articles'].bulk_write(requests=list(bulk_operations)).inserted_count
+            saved_news = news_db['article'].bulk_write(requests=list(bulk_operations)).inserted_count
             logger.info(f"Bulk insert result: {saved_news}")
         logger.info("Done")
     except Exception as err:

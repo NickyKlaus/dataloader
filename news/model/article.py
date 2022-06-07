@@ -15,6 +15,6 @@ class Article:
     title: str
     description: str
     url: str
-    url_to_image: str
-    date_published: datetime
+    urlToImage: str
+    datePublished: str
     content: str
