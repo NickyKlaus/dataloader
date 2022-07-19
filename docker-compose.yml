@@ -84,7 +84,7 @@ services:
       - NEWS_DB_PORT=27017
       - NEWS_DB_COLLECTION_NAME=news
       - NEWS_SOURCE_URL=https://newsapi.org/v2/everything?q=nasa&from={}&to={}&apiKey={}
-      - NEWS_API_KEY=adf243e64cf34f698088d4df49fc9734
+      - NEWS_API_KEY=
       - NEWS_DAYS_AGO=7
       - NEWS_CONNECT_TIMEOUT_MS=600000
     deploy:
@@ -130,12 +130,34 @@ services:
           - nasaservice
     hostname: nasaservice
     ports:
-      - 8090:8090
+      - 8080:8080
     environment:
       - NASA_DB_HOST=cassandradb
       - NASA_DB_PORT=9042
       - NASA_DB_KEYSPACE=nasa
       - NASA_DB_LOCAL_DC=datacenter1
+    deploy:
+      resources:
+        limits:
+          cpus: "0.7"
+          memory: "1G"
+
+# Run generated Book Service
+  bookservice:
+    image: nickyklaus/bookservice:latest
+    container_name: bookservice
+
+    networks:
+      data-loading:
+        aliases:
+          - bookservice
+    hostname: bookservice
+    ports:
+      - 8080:8080
+    environment:
+      - BOOKSERVICE_DB_HOST=mongo
+      - BOOKSERVICE_DB_PORT=27017
+      - BOOKSERVICE_DB_NAME=library
     deploy:
       resources:
         limits:
